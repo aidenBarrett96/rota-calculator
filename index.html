@@ -1,0 +1,418 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Wage Calculator</title>
+
+<!--These are all of the links to my external CSS files and JavaScripts files-->
+      <link href="themes/jquery.mobile.icons.min.css" rel="stylesheet" type="text/css">
+      <link href="themes/WageCalc.min.css" rel="stylesheet" type="text/css">
+      <link href="jquery-mobile/jquery.mobile.structure-1.4.5.min.css" rel="stylesheet" type="text/css">
+      <link href="jQueryAssets/jquery.ui.core.min.css" rel="stylesheet" type="text/css">
+      <link href="jQueryAssets/jquery.ui.theme.min.css" rel="stylesheet" type="text/css">
+      <link href="jQueryAssets/jquery.ui.datepicker.min.css" rel="stylesheet" type="text/css">
+      <script src="jquery.js" type="text/javascript"></script>
+      <script src="jquery-ui.min.js" type="text/javascript"></script>      
+      <script src="calculations.js" type="text/javascript"></script>
+      <script src="jQueryAssets/jquery-1.11.1.min.js" type="text/javascript"></script>
+      <script src="jquery-mobile/jquery.mobile-1.4.5.min.js" type="text/javascript"></script>
+      <script src="jquery-mobile/jquery-1.12.1.min.js" type="text/javascript"></script>
+ 	<script src="jQueryAssets/jquery.ui-1.10.4.datepicker.min.js" type="text/javascript"></script>
+      <script type="text/javascript" charset="utf-8" src="phonegap.js"></script>
+
+<script language="javascript" type="text/javascript">
+// global variables for the database
+var db;
+var shortName = 'App_Data';
+var version = '1.0';
+var displayName = 'User Payments';
+var maxSize = 10000;
+var firstTime = true
+
+function fillEntries() {
+	if(localStorage.getItem("theme") == null || localStorage.getItem("theme") == ""){
+		localStorage.setItem("theme", "a");
+		window.alert("theme set to default");
+	};
+	
+	//This function fills all of the entry boxes with the saved data and applys the selected theme
+	$("#pageShifts").attr("data-theme", localStorage.getItem("theme"));
+	$("#pageSettings").attr("data-theme", localStorage.getItem("theme"));
+	$("#pageAbout").attr("data-theme", localStorage.getItem("theme"));
+	$("#pageFeedback").attr("data-theme", localStorage.getItem("theme"));
+	$("#menu").attr("data-theme", localStorage.getItem("theme"));
+	$("#pagePastPays").attr("data-theme", localStorage.getItem("theme"));
+
+	
+document.getElementById("rateOfPay").value = 
+	localStorage.getItem("rate_of_pay");
+document.getElementById("resultsTax").value = 
+	localStorage.getItem("tax_rate");
+document.getElementById("weekDate").value =
+	localStorage.getItem("WeekBegin");
+document.getElementById("hours").value =
+	localStorage.getItem("totHrs");
+document.getElementById("paymentField").value =
+	localStorage.getItem("payment");
+
+//From here we will be initializing the database and creating the functions to enter and show the fields
+//This will show if the action can not take place because the device/ Browser does not allow it
+ if (!window.openDatabase) {
+   alert('Databases are not supported in this browser.');
+   return;
+ }
+
+// this line tries to open the database base locally on the device
+// if it does not exist, it will create it and return a database object stored in variable db
+ db = openDatabase(shortName, version, displayName,maxSize);
+
+// Below is where the table is created within the database
+ db.transaction(function(tx){
+   tx.executeSql( 'CREATE TABLE IF NOT EXISTS Payments(id INTEGER NOT NULL PRIMARY KEY, Week_Start_Date TEXT NOT NULL, Total_Hours text NOT NULL, Tax TEXT NOT NULL, Payment text NOT NULL)',[],nullHandler,errorHandler);  },errorHandler,successCallBack);
+}
+
+// this is called when an error happens in a transaction
+function errorHandler(transaction, error) {
+   alert('Error: ' + error.message + ' code: ' + error.code);
+}
+
+// this is called when a successful transaction happens
+function successCallBack() {
+   //alert("DEBUGGING: success");
+}
+
+function nullHandler(){};
+// called when the application loads
+
+// list the values in the database to the screen using jquery to update the #lbUsers Span element in the previous payments page
+function ListDBValues() {
+ if (!window.openDatabase) {
+  alert('Databases are not supported in this browser.');
+  return;
+ }
+
+/* this line clears out any content in the #lbUsers element on the page so that the next few lines will show updated content and not just keep repeating lines*/
+ $('#lbUsers').html('');
+
+/* this next section will select all the content from the Payment table and then go through it row by row appending all of the fields #lbUsers element*/
+ db.transaction(function(transaction) {transaction.executeSql('SELECT * FROM Payments;', [],     function(transaction, result) {if(result != null && result.rows != null) { for (var i = 0; i < result.rows.length; i++) { var row = result.rows.item(i);$('#lbUsers').append('<br> Week Date: ' + row.Week_Start_Date + '<br> Total Hours: ' + row.Total_Hours + '|| Tax: ' + row.Tax + '|| Payment: ' + row.Payment + '<hr>');}}},errorHandler);},errorHandler,nullHandler);
+ return;
+}
+
+// this is the function that puts values into the database using the values from the text boxes on the screen
+function AddValueToDB() {
+ if (!window.openDatabase) {
+   alert('Databases are not supported in this browser.');
+   return;
+ } else if(document.getElementById("weekDate").value == "Not Selected") {
+	 window.alert("Week start date not selected.<br>Please select a date and try again");
+	 return;
+ } else if (document.getElementById("Result") == "" || document.getElementById("Result") == null) {
+	 window.alert("No values entered please try again");
+	 return;
+ }
+ 
+ else {
+
+// this is the section that actually inserts the values into the User table from the results section on the Shifts page
+ db.transaction(function(transaction) {
+   transaction.executeSql('INSERT INTO Payments(Week_Start_Date, Total_Hours, Tax, Payment) VALUES (?,?,?,?)',[$('#weekDate').val(), $('#hours').val(), $('#resultsTax').val(), $('#paymentField').val()],nullHandler,errorHandler);
+   });
+  window.alert("Succesfully added to previous payments!");
+
+// this calls the function that will show what is in the User table in the database
+ ListDBValues();
+ return false;
+} }
+
+function clearTable() {
+	db.transaction(function(transaction) {
+   transaction.executeSql('DELETE * FROM Payments',nullHandler,errorHandler);
+   });
+   window.location.reload();
+}
+</script>
+</head>
+<body onLoad="fillEntries()">
+
+<!--Main Menu Page-->
+<div data-role="page" id="menu" data-theme="a">
+  <div data-role="header">
+    <h1>Main Menu</h1>
+  </div>
+  <div data-role="content">
+  <!--These are all of the links to the other pages-->
+  <ul data-role="listview" data-inset="true" data-split-icon="forward">
+    <li><a href="#pageShifts" data-transition="slide">Shifts</a></li>
+    <li><a href="#pagePastPays" data-transition="slide">Previous Payments</a></li>
+    <li><a href="#pageSettings" data-transition="slide">Settings</a></li>
+    <li><a href="#pageAbout" data-transition="slide">About</a></li>
+  </ul>
+  </div>
+ </div>
+ <!--End of Main Menu-->
+
+
+<!--This is the start of the Shifts page, starting with the panel that appears on the right-->
+<div data-role="page" id="pageShifts" data-theme="">
+
+<!--Right Panel: Further Details e.g. tax, overtime, rate of pay-->
+<div data-role="panel" id="panel1" data-display="reveal" data-position="right">
+<h3>Payment Details</h3>
+
+<!--This is where the user enters there rate of pay and tax rate-->
+<div data-role="fieldcontain">
+  <label for="rateOfPay">
+  Rate of Pay:</label>
+  <input type="text" name="RateOfPay" id="rateOfPay" value="" /> 
+</div>
+<div data-role="fieldcontain">
+  <label for="flipswitch">Tax:</label>
+  <select name="flipswitch" id="taxFlipswitch" data-role="slider">
+    <option value="none">Off</option>
+    <option value="20">20%</option>
+  </select>
+</div>
+<input type="button" onClick="saveUserData()" value="click">
+</div>
+<!--End of right Panel-->
+
+<!--Start of the shifts page content-->
+  <div data-role="header">
+  <a href="#menu" data-role="button" data-icon="home" class="ui-btn-icon-left" data-iconpos="notext" data-transition="slide" data-direction="reverse"></a>
+  <h1 class="ui-title">Shifts</h1>
+    <a href="#panel1" data-role="button" data-icon="bars" class="ui-btn-icon-right" data-iconpos="notext"></a>
+  </div>
+  
+  <div data-role="content" id="content">   
+  <!--Collapsable Box-->
+  <div data-role="collapsible-set">
+    <div data-role="collapsible" data-collapsed="true">
+      <h3>Instructions</h3>
+      <p>Please enter your starting and finishing times in the according days below in a 24 hour format and select the week begining date.<br/>
+      To alter your payment information go to the panel on the right by pressings the bars in the header.
+      </p>
+    </div>
+	</div>
+    <!--Datepicker-->
+<input type="text" id="Datepicker1" value="Select week start date">
+<!--This is where the user enters their start and finish times-->
+<table>
+    	<tr>
+    <th>Day</th>
+    <th colspan="2">Start</th>
+    <th colspan="2">Finish</th>
+    </tr>
+        
+        <tr>
+          <td>&nbsp;</td>
+          <td style="text-align:center">Hour</td>
+          <td style="text-align:center">Minutes</td>
+          <td style="text-align:center">Hour</td>
+          <td style="text-align:center">Minutes</td>
+        </tr>
+        <tr>
+    <td>Monday</td>
+    <td><input type="text" name="monStart" id="1" value=""  /></td>
+    <td><input type="text" name="monStart" id="2" value=""  />
+    </td>
+    <td><input type="text" name="monStart" id="3" value=""  /></td>
+    <td><input type="text" name="monFinish" id="monFinish" value=""  /></td>
+    	</tr>
+       
+        <tr>
+    <td>Tuesday</td>
+    <td><input type="text" name="monStart" id="tueStrtHrs" value=""  /></td>
+<td><input type="text" name="number" id="tueStrtMins" value=""  /></td>
+<td><input type="text" name="monStart" id="tueFinHrs" value=""  /></td>
+<td><input type="text" name="number" id="tueFinMins" value=""  /></td>
+    	</tr>
+        
+        <tr>
+    <td>Wednesday</td>
+    <td><input type="text" name="monStart" id="wedStrtHrs" value=""  /></td>
+    <td><input type="text" name="number" id="wedStrtMins" value=""  /></td>
+    <td><input type="text" name="monStart" id="wedFinHrs" value=""  /></td>
+    <td><input type="text" name="number" id="wedFinMins" value=""  /></td>
+    	</tr>
+        
+        <tr>
+    <td>Thursday</td>
+    <td><input type="text" name="monStart" id="thuStrtHrs" value=""  /></td>
+    <td><input type="text" name="number" id="thuStrtMins" value=""  /></td>
+    <td><input type="text" name="monStart" id="thuFinHrs" value=""  /></td>
+    <td><input type="text" name="number" id="thuFinMins" value=""  /></td>
+    	</tr>
+        <tr>
+    <td>Friday</td>
+    <td><input type="text" name="monStart" id="friStrtHrs" value=""  /></td>
+    <td><input type="text" name="number" id="friStrtMins" value=""  /></td>
+    <td><input type="text" name="monStart" id="friFinHrs" value=""  /></td>
+    <td><input type="text" name="number" id="friFinMins" value=""  /></td>
+    	</tr>
+        
+        <tr>
+    <td>Saturday</td>
+    <td><input type="text" name="monStart" id="satStrtHrs" value=""  /></td>
+    <td><input type="text" name="number" id="satStrtMins" value=""  /></td>
+    <td><input type="text" name="monStart" id="satFinHrs" value=""  /></td>
+    <td><input type="text" name="number" id="satFinMins" value=""  /></td>
+    	</tr>
+        
+        <tr>
+    <td>Sunday</td>
+    <td><input type="text" name="monStart" id="sunStrtHrs" value=""  /></td>
+    <td><input type="text" name="number" id="sunStrtMins" value=""  /></td>
+    <td><input type="text" name="monStart" id="sunFinHrs" value=""  /></td>
+    <td><input type="text" name="number" id="sunFinMins" value=""  /></td>
+    	</tr>
+
+    </table>
+    <input value="" type="hidden" id="ResultMon"/>
+    <input value="" type="hidden" id="ResultTue"/>
+    <input value="" type="hidden" id="ResultWed"/>
+	<input value="" type="hidden" id="ResultThu"/>
+    <input value="" type="hidden" id="ResultFri"/>
+    <input value="" type="hidden" id="ResultSat"/>
+    <input value="" type="hidden" id="ResultSun"/>
+    <input value="" type="hidden" id="Result"/>
+    <input value="" type="hidden" id="totalPay"/>
+    <input value="" type="hidden" id="res1"/>
+    <input value="" type="hidden" id="res2"/>
+<!--Below is where the calculations appear-->
+    <button onClick="calculateAll()">Calculate</button>
+<h1 style="text-decoration:underline"><b>Results</b></h1>    
+        <div data-role="fieldcontain">
+      <label for="textinput4">Week start date:</label>
+      <input type="text" name="weekDate" id="weekDate" value=""  />
+    </div>
+    <div data-role="fieldcontain">
+      <label for="textinput3">Total hours:</label>
+      <input type="text" name="hours" id="hours" value=""  />
+    </div>
+    <div data-role="fieldcontain">
+      <label for="resultsTax">Tax:</label>
+      <input type="text" name="resultsTax" id="resultsTax" value=""  />
+    </div>
+    <div data-role="fieldcontain">
+      <label for="textinput">Payment:</label>
+      <input type="text" name="paymentField" id="paymentField" value=""/>
+    </div>
+			<button onClick="AddValueToDB()">Save Results</button>
+  </div>
+</div>
+<!--End of Shifts page-->
+
+
+<!--Previous Payments page starts here-->
+<div data-role="page" id="pagePastPays" data-theme="">
+    <div data-role="header" >
+<a href="#menu" data-role="button" data-icon="home" class="ui-btn-icon-left" data-iconpos="notext" data-transition="slide" data-direction="reverse"></a>
+      <h1 class="ui-title">Previous Payments</h1>
+<a onClick="ListDBValues()" data-role="button" data-icon="refresh" class="ui-btn-icon-right" data-iconpos="notext"></a>
+
+    </div>
+    <div data-role="content" data-theme="a">
+<!--This is where the saved entries appear-->
+<h1 class="ui-title">Currently stored values:</h1>
+
+<span id="lbUsers"></span>
+
+
+    </div>
+    <div data-role="footer">
+    <!--This button deletes all of the data in the table-->
+<a onClick="clearTable()" data-role="button" data-icon="delete" class="ui-btn-icon-right">Clear Table</a>
+    </div>
+  </div>
+  <!--Previous Payments page ends here-->
+  
+ <!--Start of settings page-->
+<div data-role="page" id="pageSettings" data-theme="">
+    <div data-role="header">
+          <a href="#menu" data-role="button" data-icon="home" class="ui-btn-icon-left" data-iconpos="notext" data-transition="slide" data-direction="reverse"></a>
+      <h1 class="ui-title">Settings</h1>
+    </div>
+    <div data-role="content">
+      <div data-role="fieldcontain">
+      <!--This is where the user saves the theme-->
+        <label for="flipswitch">Theme:</label>
+        <select name="flipswitchTheme" id="flipswitchTheme" data-role="slider">
+          <option value="a">Orange</option>
+          <option value="b">Purple</option>
+        </select>
+        <button  onClick="selectTheme()">Save</button>
+      </div>
+    </div>
+  </div>
+  <!--End of settings page-->
+  
+  <!--Start of About Page-->
+<div data-role="page" id="pageAbout" data-theme="">    
+   <div data-role="header">
+<a href="#menu" data-role="button" data-icon="home" class="ui-btn-icon-left" data-iconpos="notext" data-transition="slide" data-direction="reverse"></a>
+      <h1 class="ui-title">About</h1>
+    </div>
+    <div data-role="content">
+    Created using Adobe Dreamweaver CS6&copy;(2015).
+    <br/><br/>
+    <b>DISCLAIMER: The results given by this app are an estimation based upon the information provided by the user, it is not always accurate.</b><br/><br/>
+    <a href="Terms and conditions.html">Terms & Conditions.</a><br/>
+    <a href="Privacy Statement.html">Privacy Statement.</a><br/><br/><br/>
+    
+    <ul data-role="listview" data-split-icon="forward">
+      <li><a href="#pageFeedback" data-transition="fade">Give Feedback</a><a href="#pageFeedback" data-transition="fade"></a></li>
+    </ul>
+    <br/>
+    </div>
+  </div>
+  <!--End of About Page-->
+      <!--Feedback Page starts here-->
+      <div data-role="page" id="pageFeedback" data-theme="">
+        <div data-role="header">
+          <a href="#pageAbout" data-role="button" data-icon="back" class="ui-btn-icon-left" data-iconpos="notext" data-transition="fade"></a>
+          <h1>Give Feedback</h1>
+        </div>
+        <div data-role="content">
+        <form>
+        <!--This is where the user enters thier feedback-->
+        <div data-role="fieldcontain">
+          <label for="Email">Your Email Adress:</label>
+          <input type="text" name="Email" id="Email" value=""  />
+        </div>
+        <div data-role="fieldcontain">
+          <label for="yourMessage">Your Message Here:</label>
+          <textarea cols="40" rows="8" name="yourMessage" id="yourMessage"></textarea>
+        </div>
+        <button>Submit</button>
+       </form>
+        
+        </div>
+         
+      </div>
+      <!--End of Feedback Page-->
+      
+      <!--Dialog box for theme-->
+      <div data-role="page" id="dialog" data-rel="dialog">
+        <div data-role="content">Content</div>
+      </div>
+<script type="text/javascript">
+$(function() {
+	$( "#Datepicker1" ).datepicker(); 
+});
+</script>
+<!--The Function below allows you to swipe to open the panel-->
+<script type="text/javascript">
+$(document).on('pageinit',function(){
+	$("#content").on("swiperight",function(){
+		$("#panel1").panel( "open");
+	});
+	$("#content").on("swipeleft",function(){
+		$("#panel1").panel( "open");
+	});
+});
+
+</script>
+
+</body>
+</html>
